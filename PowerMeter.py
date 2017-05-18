@@ -1,4 +1,6 @@
 import visa
+import time
+import csv
 import serial
 import serial.tools.list_ports
 
@@ -49,63 +51,94 @@ rm = visa.ResourceManager()
 # Opening connection to Kiethley 2401
 K2401 = rm.open_resource('GPIB0::24::INSTR')
 print(K2401.query('*IDN?'))
-K2401.timeout = 25000
 
+# K2401.timeout = 25000
+# K2401.write('*RST')
+# K2401.write(':SOUR:FUNC VOLT')
+# K2401.write(':SOUR:VOLT:MODE FIXED')
+# K2401.write(':SOUR:VOLT:RANG 10')
+# for i in range(1,51):
+#     appVolts = 3+(i*.2)
+#     K2401.write(':SOUR:VOLT:LEV {0}'.format(appVolts))
+#     K2401.write(':SENS:CURR:PROT 10E-3')
+#     K2401.write(':SENS:FUNC "CURR"')
+#     K2401.write(':SENS:CURR:RANG 10E-3')
+#     K2401.write(':FORM:ELEM CURR')
+#     K2401.write(':OUTP ON')
+#     time.sleep(1)
+#     buf = K2401.query(':READ?')
+#     K2401.write(':OUTP OFF')
+#     print('{0} volts applied'.format(appVolts))
+#     print(buf)
+# K2401.timeout = 1000*60*65
+# K2401.write('*RST')
+# K2401.write(':SOUR:FUNC VOLT')
+# K2401.write(':SOUR:VOLT:MODE FIXED')
+# K2401.write(':SOUR:VOLT:RANG 10')
+
+def sourceVoltage(voltage,tlength):
+    K2401.write(':SOUR:VOLT:LEV {0}'.format(voltage))
+    K2401.write(':SENS:CURR:PROT 10E-3')
+    K2401.write(':SENS:FUNC "CURR"')
+    K2401.write(':SENS:CURR:RANG 10E-3')
+    K2401.write(':FORM:ELEM CURR')
+    K2401.write(':OUTP ON')
+    time.sleep(tlength)
+    buf = K2401.query(':READ?')
+    print('{0} volts applied'.format(voltage))
+    print(buf)
+    return buf.split('\n')[0]
+
+
+K2401.timeout = 1000*60*65
 K2401.write('*RST')
-K2401.write(':SOUR:FUNC VOLT')
-K2401.write(':SOUR:VOLT:MODE FIXED')
-K2401.write(':SOUR:VOLT:RANG 1')
-K2401.write(':SOUR:VOLT:LEV 0.0005')
-K2401.write(':SENS:CURR:PROT 10E-3')
-K2401.write(':SENS:FUNC "CURR"')
-K2401.write(':SENS:CURR:RANG 10E-3')
-K2401.write(':FORM:ELEM CURR')
-K2401.write(':OUTP ON')
-buf = K2401.query(':READ?')
+K2401.write(':SOUR:FUNC CURR')
+K2401.write(':SOUR:CURR:MODE FIXED')
+K2401.write(':SOUR:CURR:RANG 10E-3')
+
+def sourceCurrent(curr,tlength):
+    K2401.write(':SOUR:CURR:LEV {0}'.format(curr))
+    K2401.write(':SENS:VOLT:PROT 20')
+    K2401.write(':SENS:FUNC "VOLT"')
+    K2401.write(':SENS:VOLT:RANG 25')
+    K2401.write(':FORM:ELEM VOLT')
+    K2401.write(':OUTP ON')
+    time.sleep(tlength)
+    buf = K2401.query(':READ?')
+    print('{0} amps applied'.format(curr))
+    print(buf)
+    return buf.split('\n')[0]
+
+# for i in range(1,90):
+#     appV = 3+(i*.1)
+#     sourceVoltage(appV,.25)
+
+voltMeas = []
+minutes = 10
+for i in range(1,1+(6*minutes)):
+    voltMeas.append(sourceCurrent(3e-3,10))
+    print('{0:2.2} min / {1} min'.format(i/6,minutes))
+
+
+
+
+# currMeas = []
+# for i in range(1,1+(6*minutes)):
+#     currMeas.append(sourceVoltage(10,10))
+
 K2401.write(':OUTP OFF')
-#
-print(buf)
 
-# voltProt = 1
-# currStart = 1E-3
-# currStep = 1E-3
-# currStop = 10E-3
-# K2401.write('*RST')                             # Restore GPIB defaults
-# K2401.write(':ROUT:TERM FRON')                  # Use front terminals
-# K2401.write(':SENS:FUNC:CONC OFF')              # Turn off concurrent functions
-# K2401.write(':SOUR:FUNC CURR')                  # Current source function
-# K2401.write(":SENS:FUNC 'VOLT:DC'")             # Voltage sense function
-# K2401.write(':SENS:VOLT:PROT %d' % voltProt)    # Voltage compliance set
-# K2401.write(':SOUR:CURR:START %d' % currStart)  # Current sweep start
-# K2401.write(':SOUR:CURR:STEP %d' % currStep)    # Current sweep step
-# K2401.write(':SOUR:CURR:STOP %d' % currStop)    # Current sweep stop
-# K2401.write(':SOUR:CURR:MODE SWE')              # Select current sweep mode
-# K2401.write(':SOUR:SWE:RANG AUTO')              # Auto source ranging
-# K2401.write(':SOUR:SWE:SPAC LIN')               # Linear staircase sweep
-# K2401.write(':TRIG:COUN 10')                    # Trigger count = number sweep points
-# K2401.write(':SOUR:DEL 0.1')                    # 100ms Source delay
-# K2401.write(':OUTP ON')                         # Source output on
-# data = K2401.query('READ?')                           # Trigger sweep, request data
-# K2401.write(':OUTP OFF')                        # Source output off
-#
-# # print(data)
-# dataList = data.split(',')
-# v = []
-# curr = []
-# res = []
-# time = []
-# status = []
-# for i in range(0,len(dataList),5):
-#     v.append(dataList[i])
-#     curr.append(dataList[i+1])
-#     res.append(dataList[i+2])
-#     time.append(dataList[i+3])
-#     status.append(dataList[i+4])
-# print(len(dataList))
-# for i in range(len(v)):
-#     print('Voltage: '+v[i]+'  Current: '+curr[i]+'  Resistance: '+res[i])
+# Write data to output file
+# with open('output_OLED.csv','w',newline='') as csvfile:
+#     spamwriter = csv.writer(csvfile,delimiter=',')
+#     for item in currMeas:
+#         spamwriter.writerow([item,])
 
-######################################################################################
+with open('output_OLED_sourcecurr.csv','w',newline='') as csvfile:
+    spamwriter = csv.writer(csvfile,delimiter=',')
+    for item in voltMeas:
+        spamwriter.writerow([item,])
+
 # Opening connection to Kiethley 2000
 K2000 = rm.open_resource('GPIB0::16::INSTR')
 print(K2000.query('*IDN?'))
