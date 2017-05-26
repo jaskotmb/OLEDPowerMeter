@@ -114,7 +114,7 @@ def sourceCurrent(curr,tlength):
 #     sourceVoltage(appV,.25)
 
 voltMeas = []
-minutes = 10
+minutes = 1
 for i in range(1,1+(6*minutes)):
     voltMeas.append(sourceCurrent(3e-3,10))
     print('{0:2.2} min / {1} min'.format(i/6,minutes))
@@ -126,7 +126,7 @@ for i in range(1,1+(6*minutes)):
 # for i in range(1,1+(6*minutes)):
 #     currMeas.append(sourceVoltage(10,10))
 
-K2401.write(':OUTP OFF')
+# K2401.write(':OUTP OFF')
 
 # Write data to output file
 # with open('output_OLED.csv','w',newline='') as csvfile:
