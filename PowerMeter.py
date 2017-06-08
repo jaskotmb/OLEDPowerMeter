@@ -45,7 +45,7 @@ def openSR570(sr570port,gain=0,gmode=0,filter=4,lf3dB=3,hf3dB=15):
 
 # sources voltage from Kiethley2401
 def sourceVoltage(voltage,tlength):
-    K2401.write(':SOUR:VOLT:LEV {0}'.format(voltage))
+    K2401.write(':SOUR:VOLT:LEV {}'.format(voltage))
     K2401.write(':SENS:CURR:PROT 10E-3')
     K2401.write(':SENS:FUNC "CURR"')
     K2401.write(':SENS:CURR:RANG 10E-3')
@@ -58,40 +58,34 @@ def sourceVoltage(voltage,tlength):
     return buf.split('\n')[0]
 
 # Initializes Kiethley 2401 in current source mode
-def sourceCurrentInitialize(Kiethley2401Name,timeout=1,range=10e-3):
+def sourceCurrentInitialize(Kiethley2401Name,timeout=1,range=100e-3):
     Kiethley2401Name.write('*RST')
     Kiethley2401Name.write(':SOUR:FUNC CURR')
     Kiethley2401Name.write(':SOUR:CURR:MODE FIXED')
     Kiethley2401Name.write(':SOUR:CURR:RANG {}'.format(range))
 
 # sources current from Kiethley2401
-def sourceCurrent(Kiethley2401Name,curr,tlength):
-    Kiethley2401Name.write(':SOUR:CURR:LEV {0}'.format(curr))
-    Kiethley2401Name.write(':SENS:VOLT:PROT 20')
+def sourceCurrent(Kiethley2401Name,curr,tlength,voltProt=20):
+    Kiethley2401Name.write(':SOUR:CURR:LEV {}'.format(curr))
+    Kiethley2401Name.write(':SENS:VOLT:PROT {}'.format(voltProt))
     Kiethley2401Name.write(':SENS:FUNC "VOLT"')
-    Kiethley2401Name.write(':SENS:VOLT:RANG 25')
-    Kiethley2401Name.write(':FORM:ELEM VOLT')
+    Kiethley2401Name.write(':SENS:VOLT:RANG 20')
+    Kiethley2401Name.write(':FORM:ELEM VOLT,CURR')
     Kiethley2401Name.write(':OUTP ON')
     time.sleep(tlength)
     buf = Kiethley2401Name.query(':READ?')
-    print('{0} amps applied'.format(curr))
-    print(buf)
-    return buf.split('\n')[0]
+    # print('{0} amps applied'.format(curr))
+    # print(buf)
+    VIpair = [float(buf.split(',')[0]),float(buf.split(',')[1])]
+    return VIpair
 
-######################################################################################
-# Listing Instruments (Serial and GPIB)
-rm = visa.ResourceManager()
-# print(rm.list_resources())
-# Opening connection to Kiethley 2401
-K2401 = rm.open_resource('GPIB0::24::INSTR')
-print(K2401.query('*IDN?'))
-
-def IVsweep(Kiethley2401Name,prot=20,currStart,currStop,currStep,delayTime):
+def IVsweep(Kiethley2401Name,voltProt,currStart,currStop,currStep,delayTime):
     Kiethley2401Name.write('*RST')
+    Kiethley2401Name.write('ROUT:TERM FRON') # front terminals
     Kiethley2401Name.write(':SENS:FUNC:CONC OFF') # turn off concurrent functions
     Kiethley2401Name.write(':SOUR:FUNC CURR') # current source function
     Kiethley2401Name.write(":SENS:FUNC 'VOLT:DC'") # voltage sense function
-    Kiethley2401Name.write('SENS:VOLT:PROT {}'.format(prot)) # current overprotection (default 20V)
+    Kiethley2401Name.write('SENS:VOLT:PROT {}'.format(voltProt)) # current overprotection (default 20V)
     Kiethley2401Name.write('SOUR:CURR:START {}'.format(currStart)) # current start
     Kiethley2401Name.write('SOUR:CURR:STOP {}'.format(currStop)) # current stop
     Kiethley2401Name.write('SOUR:CURR:STEP {}'.format(currStep)) # current step
@@ -101,10 +95,52 @@ def IVsweep(Kiethley2401Name,prot=20,currStart,currStop,currStep,delayTime):
     numSteps = ((currStop - currStart)/currStep) +1
     Kiethley2401Name.write('TRIG:COUN {}'.format(numSteps)) # trigger count = # sweep points
     Kiethley2401Name.write('SOUR:DEL {}'.format(delayTime)) # source delay time
+    Kiethley2401Name.write('FORM:ELEM VOLT,CURR') # set output buffer to voltage, current pairs
     Kiethley2401Name.write('OUTP ON') # turn on source output
-    Kiethley2401Name.write('READ?') # trigger sweep, request data
+    buf = Kiethley2401Name.query('READ?') # trigger sweep, request data
+    VIlist = buf.split(',')
+    # convert to floats:
+    for i in range(len(VIlist)):
+        VIlist[i] = float(VIlist[i])
+    voltageList = VIlist[::2]
+    currentList = VIlist[1::2]
+    IVpairs = list(zip(currentList,voltageList))
+    return IVpairs
+
+######################################################################################
+# Listing Instruments (Serial and GPIB)
+rm = visa.ResourceManager()
+# print(rm.list_resources())
+# Opening connection to Kiethley 2401
+K2401 = rm.open_resource('GPIB0::24::INSTR')
+print(K2401.query('*IDN?'))
+# Opening connection to Kiethley 2000
+K2000 = rm.open_resource('GPIB0::16::INSTR')
+print(K2000.query('*IDN?'))
+
+Kiethley2000Name = K2000
+Kiethley2000Name.write('*RST')
+Kiethley2000Name.write(":SENS:FUNC 'CURR:DC'") # sense current
+Kiethley2000Name.write('SENS:CURR:DC:RANGE 10e-3') # set current sense range
+Kiethley2000Name.write(':TRIG:COUN 1') # set one trigger
+Kiethley2000Name.write(':INIT')
+Kiethley2000Name.query(':TRAC:DATA?')
 
 
+
+sourceCurrentInitialize(K2401)
+for i in range(1,21):
+    print(sourceCurrent(K2401,i*10e-4,1))
+
+########################## For IV sweep ##########################
+# Set voltage
+# Rolling measurement of current, when it settles within limits, record current
+# Record output current from Kiethley 2000
+# Step voltage thru to next
+
+
+# buffer = IVsweep(K2401,20,.1e-3,.5e-3,.1e-3,.5)
+# print(buffer)
 
 
 
@@ -120,9 +156,7 @@ def IVsweep(Kiethley2401Name,prot=20,currStart,currStop,currStep,delayTime):
 #     for item in voltMeas:
 #         spamwriter.writerow([item,])
 
-# Opening connection to Kiethley 2000
-K2000 = rm.open_resource('GPIB0::16::INSTR')
-print(K2000.query('*IDN?'))
+
 # Configuration Settings for Kiethley 2000
 
 # Close GPIB connection to Kiethleys
