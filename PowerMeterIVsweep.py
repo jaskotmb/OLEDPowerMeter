@@ -110,101 +110,94 @@ def IVsweep(Kiethley2401Name,voltProt,currStart,currStop,currStep,delayTime):
     return IVpairs
 
 ######################################################################################
-sampleName = "171003B28"
-startTime = time.localtime()
-startTimeString = str(startTime.tm_year)+str(startTime.tm_mon).zfill(2)+\
-                  str(startTime.tm_mday).zfill(2)+'-'+\
-                  str(startTime.tm_hour).zfill(2)+'-'+\
-                  str(startTime.tm_min).zfill(2)+'-'+\
-                  str(startTime.tm_sec).zfill(2)
-samp = 25000
-scurr = .04
-exptLength = 3600*(.1)
-exptStart = time.time()
-print("exptStart: ",exptStart)
-curDir = os.getcwd()
-directory = curDir+"\\"+sampleName+"_"+startTimeString
-os.makedirs(directory)
-os.chdir(directory)
+# sampleName = "171003C21"
+# startTime = time.localtime()
+# startTimeString = str(startTime.tm_year)+str(startTime.tm_mon).zfill(2)+\
+#                   str(startTime.tm_mday).zfill(2)+'-'+\
+#                   str(startTime.tm_hour).zfill(2)+'-'+\
+#                   str(startTime.tm_min).zfill(2)+'-'+\
+#                   str(startTime.tm_sec).zfill(2)
+# samp = 2000
+# scurr = .04
+# exptLength = 3600*(.1)
+# exptStart = time.time()
+# print("exptStart: ",exptStart)
+# curDir = os.getcwd()
+# directory = curDir+"\\"+sampleName+"_"+startTimeString
+# os.makedirs(directory)
+# os.chdir(directory)
 
-while (time.time() < exptStart + exptLength):
-    print("time left: ",round((exptStart+exptLength)-time.time(),0))
-    # Listing Instruments (Serial and GPIB)
-    rm = visa.ResourceManager()
-    # print(rm.list_resources())
-    # Opening connection to Kiethley 2401
-    K2401 = rm.open_resource('GPIB0::24::INSTR')
-    print(K2401.query('*IDN?'))
-    # Opening connection to Kiethley 2000
-    K2000 = rm.open_resource('GPIB0::16::INSTR')
-    print(K2000.query('*IDN?'))
+# while (time.time() < exptStart + exptLength):
+# print("time left: ",round((exptStart+exptLength)-time.time(),0))
+# Listing Instruments (Serial and GPIB)
+rm = visa.ResourceManager()
+# print(rm.list_resources())
+# Opening connection to Kiethley 2401
+K2401 = rm.open_resource('GPIB0::24::INSTR')
+print(K2401.query('*IDN?'))
+# Opening connection to Kiethley 2000
+K2000 = rm.open_resource('GPIB0::16::INSTR')
+print(K2000.query('*IDN?'))
 
-    Kiethley2000Name = K2000
-    Kiethley2000Name.write('*RST')
-    Kiethley2000Name.write(":SENS:FUNC 'CURR:DC'") # sense current
-    Kiethley2000Name.write('SENS:CURR:DC:RANGE 10e-3') # set current sense range
-    # Kiethley2000Name.write(':TRIG:COUN 1') # set one trigger
-    # Kiethley2000Name.write(':INIT')
-    # Kiethley2000Name.query(':DATA?')
+Kiethley2000Name = K2000
+Kiethley2401Name = K2401
+Kiethley2401Name.write('*RST')
+Kiethley2401Name.write(':SOUR:FUNC CURR')
+Kiethley2000Name.write(':SENS:FUNC "VOLTS:DC"')
+Kiethley2000Name.write(':SENS:CURR:DC:RANGE 10E-3')
+
+Kiethley2401Name.write(':SOUR:CURR:MODE FIX')
+Kiethley2401Name.write(':SOUR:CURR:LEV 10E-6')
+Kiethley2401Name.write(':SENS:FUNC "VOLT"')
+Kiethley2401Name.write(':SENS:VOLT:PROT 20')
+Kiethley2401Name.write(':FORM:ELEM VOLT,CURR')
+
+Kiethley2401Name.write(':OUTP ON')
+currStart = 1E-7
+currStep = 1E-7
+currStop = 400E-7
+steps = int(round((currStop - currStart)/currStep)) + 1
+
+numBers = [1,2,3,4,5,6,7,8,9]
+logList = []
+for k in range(-11,-1):
+    logList = logList + [x*(10**k) for x in numBers]
+
+print(steps)
+brightCurr = []
+KVolts = []
+sourceCurr = []
+for i in logList:
+    currVal = i
+    Kiethley2401Name.write(':SOUR:CURR:LEV {}'.format(currVal))
+    brightCurr.append(Kiethley2000Name.query(':DATA?').strip('\n').strip('+'))
+    KVolts.append(Kiethley2401Name.query(':READ?').strip('\n').strip('+').split(',')[0])
+    sourceCurr.append(Kiethley2401Name.query(':READ?').strip('\n').strip('+').split(',')[1].strip('+'))
+    time.sleep(.1)
+Kiethley2401Name.write(':OUTP OFF')
+with open('test.csv','w',newline='') as csvfile:
+# with open(sampleName+'_'+startTimeString2+'.csv','w',newline='') as csvfile:
+    lis = [KVolts,sourceCurr,brightCurr]
+    # csvfile.write("Sample Name: "+sampleName+"\n")
+    # csvfile.write("Start Time: "+startTimeString+"\n")
+    # csvfile.write("Run Length: "+str(round(runTime,2))+"\n")
+    csvfile.write("Voltage (V),Current (A), Brightness Current (A)\n")
+    for x in zip(*lis):
+        csvfile.write("{0},{1},{2}\n".format(*x))
+# print(brightCurr)
+# print(KVolts)
+# print(sourceCurr)
+# Kiethley2000Name.write('SENS:CURR:DC:RANGE 10e-3') # set current sense range
+# Kiethley2000Name.write(':TRIG:COUN 1') # set one trigger
+# Kiethley2000Name.write(':INIT')
+# Kiethley2000Name.query(':DATA?')
 
 
 
-    Kiethley2000Name.write(':TRIG:COUN 4')
-    Kiethley2000Name.write(':INIT')
 
-    readBrightnessCurrent = []
-    readVoltage = []
-    readCurrent = []
-    sourceCurrentInitialize(K2401)
-
-    startTime2 = time.localtime()
-    startTimeString2 = str(startTime2.tm_year)+str(startTime2.tm_mon).zfill(2)+\
-                       str(startTime2.tm_mday).zfill(2)+'-'+\
-                       str(startTime2.tm_hour).zfill(2)+'-'+\
-                       str(startTime2.tm_min).zfill(2)+'-'+\
-                       str(startTime2.tm_sec).zfill(2)
-    startTimeEpoch = time.time()
-    for i in range(0,samp):
-        readV,readI = sourceCurrent(K2401,scurr*10e-4,1)
-        readVoltage.append(readV)
-        readCurrent.append(float(readI))
-        print("Measurement #{}, {} min left".format(i,((samp-i)*1.12935/60)))
-        Kiethley2000Name.write(':INIT')
-        readBrightnessCurrent.append(float(Kiethley2000Name.query(':DATA?').strip('\n').strip('+')))
-    endTimeEpoch = time.time()
-    runTime = endTimeEpoch - startTimeEpoch
-    # print(readVoltage)
-    # print(readCurrent)
-    # print(readBrightnessCurrent)
-    print("startTime: "+str(startTime))
-    print("runTime: "+str(runTime))
-
-    # plt.plot(readVoltage,readCurrent)
-    # plt.show()
-    # plt.figure(1)
-    # plt.subplot(211)
-    # plt.plot(readVoltage,readCurrent)
-    # plt.subplot(212)
-    # plt.plot(readCurrent,readBrightnessCurrent,[0,0.001],[0,.000001],'r-')
-    # plt.show()
-
-    # buffer = IVsweep(K2401,20,.1e-3,.5e-3,.1e-3,.5)
-    # print(buffer)
-
-    with open(sampleName+'_'+startTimeString2+'.csv','w',newline='') as csvfile:
-        lis = [readVoltage,readCurrent,readBrightnessCurrent]
-        csvfile.write("Sample Name: "+sampleName+"\n")
-        csvfile.write("Start Time: "+startTimeString+"\n")
-        csvfile.write("Run Length: "+str(round(runTime,2))+"\n")
-        csvfile.write("Voltage (V),Current (A), Brightness Current (A)\n")
-        for x in zip(*lis):
-            csvfile.write("{0},{1},{2}\n".format(*x))
-    # Set Current and wait:
-    # sourceCurrent(K2401,10e-3,1)
-    # time.sleep(600)
     # Close GPIB connection to Kiethleys
-    K2000.close()
-    K2401.close()
+K2000.close()
+K2401.close()
 
 
 
