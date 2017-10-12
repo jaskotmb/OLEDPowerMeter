@@ -110,15 +110,15 @@ def IVsweep(Kiethley2401Name,voltProt,currStart,currStop,currStep,delayTime):
     return IVpairs
 
 ######################################################################################
-sampleName = "171003B28"
+sampleName = "171006K15"
 startTime = time.localtime()
 startTimeString = str(startTime.tm_year)+str(startTime.tm_mon).zfill(2)+\
                   str(startTime.tm_mday).zfill(2)+'-'+\
                   str(startTime.tm_hour).zfill(2)+'-'+\
                   str(startTime.tm_min).zfill(2)+'-'+\
                   str(startTime.tm_sec).zfill(2)
-samp = 25000
-scurr = .04
+samp = 500
+scurr = .05
 exptLength = 3600*(.1)
 exptStart = time.time()
 print("exptStart: ",exptStart)
@@ -203,6 +203,7 @@ while (time.time() < exptStart + exptLength):
     # sourceCurrent(K2401,10e-3,1)
     # time.sleep(600)
     # Close GPIB connection to Kiethleys
+    K2401.write('OUTP OFF')
     K2000.close()
     K2401.close()
 

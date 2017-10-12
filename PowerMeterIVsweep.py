@@ -155,27 +155,27 @@ Kiethley2401Name.write(':FORM:ELEM VOLT,CURR')
 Kiethley2401Name.write(':OUTP ON')
 currStart = 1E-7
 currStep = 1E-7
-currStop = 400E-7
+currStop = 1E-3
 steps = int(round((currStop - currStart)/currStep)) + 1
 
-numBers = [1,2,3,4,5,6,7,8,9]
+numBers = [1,1.2,1.4,1.6,1.8,2,2.4,2.6,2.8,3,3.5,4,4.5,5,5.5,6,7,8,9]
 logList = []
-for k in range(-11,-1):
+for k in range(-10,-2):
     logList = logList + [x*(10**k) for x in numBers]
 
 print(steps)
 brightCurr = []
 KVolts = []
 sourceCurr = []
-for i in logList:
+for i in logList[::-1]:
     currVal = i
     Kiethley2401Name.write(':SOUR:CURR:LEV {}'.format(currVal))
+    time.sleep(.5)
     brightCurr.append(Kiethley2000Name.query(':DATA?').strip('\n').strip('+'))
     KVolts.append(Kiethley2401Name.query(':READ?').strip('\n').strip('+').split(',')[0])
     sourceCurr.append(Kiethley2401Name.query(':READ?').strip('\n').strip('+').split(',')[1].strip('+'))
-    time.sleep(.1)
 Kiethley2401Name.write(':OUTP OFF')
-with open('test.csv','w',newline='') as csvfile:
+with open('171006F17_IV_after.csv','w',newline='') as csvfile:
 # with open(sampleName+'_'+startTimeString2+'.csv','w',newline='') as csvfile:
     lis = [KVolts,sourceCurr,brightCurr]
     # csvfile.write("Sample Name: "+sampleName+"\n")

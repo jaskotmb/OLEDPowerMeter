@@ -2,7 +2,7 @@ rm(list=ls())
 # Ubuntu Directory
 # homeDir = "/home/jaskotmb/Documents/OLED_Data/170926"
 # Windows Directory
-homeDir = "C:/Users/jasko/IdeaProjects/OLEDPowerMeter/OLED_Data/171003"
+homeDir = "C:/Users/jasko/IdeaProjects/OLEDPowerMeter/OLED_Data/170926"
 setwd(homeDir)
 fileList <- list.files()
 
@@ -14,7 +14,7 @@ dfList = list(seq(1,numFiles)) # dfList is an array to hold dataframes
 for (i in seq(1,numFiles)){
   setwd(homeDir)
   setwd(fileList[i])
-  fn <- list.files()
+  fn <- list.files()[1]
   dfList[[i]] <- read.csv(file=fn,skip=3)
 }
 # Array of Data measurement lengths
@@ -26,13 +26,15 @@ for (i in seq(1,numFiles)){
 tstep <- 1.12935
 Area <- 0.02 #cm^2
 # cols <- rainbow(numFiles,start=2/6,end=5/6)
-cols = c(rep("red",2),rep("black",6),rep("blue",2),rep("lightblue",5),rep("orange",2),"green")
+cols = c(rep("red",130),rep("blue",7),rep("brown",8),rep("lightblue",5),rep("orange",2),"green")
 
 # Brightness decay
-plot(0,xlim=c(0,28000),ylim=c(-12.5,-6.5))
-for (i in seq(1,numFiles)){
-  lines(seq(1,lenData[i])*tstep,log(dfList[[i]]$Brightness.Current..A./Area),col=cols[i])
+plot(0,xlim=c(0,1800),ylim=c(-10,-4),xlab="Time (sec)",ylab="Log(Brightness)",
+     main="50mA/cm^2 Current OLED Aging")
+for (i in seq(2,numFiles)){
+  lines(seq(1,lenData[i])*tstep,log(abs(dfList[[i]]$Brightness.Current..A./Area)),col=cols[i])
 }
+legend(200,-6.4,c("No getter film","Getter film"),col=c("blue","red"),pch=17)
 
 plot(0,xlim=c(0,2200),ylim=c(0.000002,0.000003))
 for (i in seq(1,numFiles)){
